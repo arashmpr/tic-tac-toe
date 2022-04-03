@@ -94,7 +94,7 @@ int send_port(waiting_list* list) {
 
 void save_port(int port, int* ports_list) {
     for (int i=0 ; i < sizeof(ports_list) ; i++) {
-        if (ports_list[i] != 0) {
+        if (ports_list[i] == 0) {
             ports_list[i] = port;
         }
     }
