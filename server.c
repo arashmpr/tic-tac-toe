@@ -73,7 +73,7 @@ bool players_ready_to_play(waiting_list* list) {
 
 int send_port(waiting_list* list) {
     int port = get_rand_port();
-    printf("port is %d: \n", port);
+    printf("port %d has been activated.\n", port);
     char port_and_id_playe_one[BUFFER_SIZE] = {0};
     char port_and_id_playe_two[BUFFER_SIZE] = {0};
 
@@ -117,6 +117,24 @@ void handle_viewer(int client_socket, int* ports_list) {
     send(client_socket, ports_list, sizeof(ports_list), 0);
 }
 
+void handle_result(int* ports_list, char* result) {
+    int winner, port;
+    sscanf(result, "%d %d", &winner, &port);
+    printf("port %d has been deactivated.\n", port);
+
+    FILE *fp;
+    fp = fopen("result.txt", "w+");
+    fprintf(fp, "The winner of port %d is Player %d", port, winner);
+    fclose(fp);
+
+    //deleting the port from active ports
+    for (int i=0 ; i < 100 ; i++) {
+        if (ports_list[i] == port) {
+            ports_list[i] = 0;
+        }
+    }
+}
+
 void handle_connection(int client_socket, waiting_list* players_list, int* ports_list) {
     char player_or_viewer_buffer[BUFFER_SIZE];
     recv(client_socket, player_or_viewer_buffer, sizeof(player_or_viewer_buffer), 0);
@@ -125,6 +143,8 @@ void handle_connection(int client_socket, waiting_list* players_list, int* ports
         handle_player(client_socket, players_list, ports_list);
     } else if (atoi(player_or_viewer_buffer) == 2) {
         handle_viewer(client_socket, ports_list);
+    } else {
+        handle_result(ports_list, player_or_viewer_buffer);
     }
 }
 
@@ -133,7 +153,7 @@ int main(int argc, char const *argv[])
     int server_fd, new_player_fd;
     int rc, opt = 1;
     int port;
-    int ports_list[1024] = {0};
+    int ports_list[100] = {0};
     struct sockaddr_in server_address;
     char buffer[BUFFER_SIZE] = {0};
     fd_set master_set, working_set;
@@ -164,7 +184,8 @@ int main(int argc, char const *argv[])
         exit(-1);
    }
 
-
+    port = argc > 1 ? atoi(argv[1]) : DEFAULT_PORT;
+    ports_list[0] = port;
     server_address.sin_family = AF_INET;
     server_address.sin_addr.s_addr = INADDR_ANY;
     server_address.sin_port = htons(DEFAULT_PORT);
@@ -213,7 +234,7 @@ int main(int argc, char const *argv[])
                     FD_SET(new_player_fd, &master_set);
                 }
                 else {
-                    handle_connection(i, &players_list, &ports_list);
+                    handle_connection(i, &players_list, ports_list);
                     FD_CLR(i, &master_set);
                 }
             }
